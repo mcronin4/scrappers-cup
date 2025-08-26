@@ -219,7 +219,10 @@ export default function PlayerPage({ params }: PlayerPageProps) {
                     return (
                       <tr key={match.id} className="hover:bg-gray-50">
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          {new Date(match.date_played).toLocaleDateString()}
+                          {(() => {
+                            const [year, month, day] = match.date_played.split('-')
+                            return new Date(parseInt(year), parseInt(month) - 1, parseInt(day)).toLocaleDateString()
+                          })()}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <Link 

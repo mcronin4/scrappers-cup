@@ -324,7 +324,10 @@ export default function MatchHistory({ matches: initialMatches }: MatchHistoryPr
                         className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
                       />
                     ) : (
-                      new Date(match.date_played).toLocaleDateString()
+                      (() => {
+                        const [year, month, day] = match.date_played.split('-')
+                        return new Date(parseInt(year), parseInt(month) - 1, parseInt(day)).toLocaleDateString()
+                      })()
                     )}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
