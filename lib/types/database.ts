@@ -5,7 +5,9 @@ export interface Player {
   initial_rank: number
   current_rank: number
   notes: string
+  is_active: boolean
   created_at: string
+  display_rank?: number  // Optional field added by getActiveLeaderboard for frontend display
 }
 
 export interface Match {
@@ -47,4 +49,14 @@ export interface PlayerStats {
   sets_lost: number
   games_won: number
   games_lost: number
+}
+
+export interface RankAdjustment {
+  id: string
+  player_id: string
+  old_rank: number
+  new_rank: number
+  reason?: string
+  adjusted_by: string
+  adjusted_at: string
 }
