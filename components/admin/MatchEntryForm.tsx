@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { Player, Match } from '@/lib/types/database'
-import { determineMatchWinner } from '@/lib/utils/ladder'
+import { determineMatchWinner, getActiveLeaderboard } from '@/lib/utils/ladder'
 import { useRouter } from 'next/navigation'
 
 interface MatchEntryFormProps {
@@ -11,6 +11,9 @@ interface MatchEntryFormProps {
 }
 
 export default function MatchEntryForm({ players }: MatchEntryFormProps) {
+  // Get active players using utility function
+  const activePlayers = getActiveLeaderboard(players)
+  
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState('')
   const router = useRouter()
@@ -94,33 +97,9 @@ export default function MatchEntryForm({ players }: MatchEntryFormProps) {
         throw matchError
       }
 
-      // Update ladder rankings
-      const { data: allPlayers, error: playersError } = await supabase
-        .from('players')
-        .select('*')
-        .order('current_rank', { ascending: true })
-
-      if (playersError) {
-        throw playersError
-      }
-
-      if (allPlayers) {
-        // Import and use the ladder logic
-        const { updateLadderRankings } = await import('@/lib/utils/ladder')
-        const updatedPlayers = updateLadderRankings(allPlayers, finalMatchData as Match)
-
-        // Update player rankings in database
-        for (const player of updatedPlayers) {
-          const { error: updateError } = await supabase
-            .from('players')
-            .update({ current_rank: player.current_rank })
-            .eq('id', player.id)
-
-          if (updateError) {
-            console.error('Error updating player rank:', updateError)
-          }
-        }
-      }
+      // Rebuild rankings from unified timeline after adding match
+      const { rebuildRankingsFromTimeline } = await import('@/lib/utils/ladder')
+      await rebuildRankingsFromTimeline(supabase)
 
       setMessage('Match recorded successfully!')
       setFormData({
@@ -178,9 +157,9 @@ export default function MatchEntryForm({ players }: MatchEntryFormProps) {
               required
             >
               <option value="">Select Player 1</option>
-              {players.map((player) => (
+              {activePlayers.map((player) => (
                 <option key={player.id} value={player.id}>
-                  {player.name} (#{player.current_rank})
+                  {player.name} (#{player.display_rank || player.current_rank})
                 </option>
               ))}
             </select>
@@ -197,9 +176,9 @@ export default function MatchEntryForm({ players }: MatchEntryFormProps) {
               required
             >
               <option value="">Select Player 2</option>
-              {players.map((player) => (
+              {activePlayers.map((player) => (
                 <option key={player.id} value={player.id}>
-                  {player.name} (#{player.current_rank})
+                  {player.name} (#{player.display_rank || player.current_rank})
                 </option>
               ))}
             </select>

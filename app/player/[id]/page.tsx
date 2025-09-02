@@ -88,6 +88,33 @@ export default function PlayerPage({ params }: PlayerPageProps) {
     return null
   }
 
+  // Check if player is inactive
+  if (!player.is_active) {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <Navigation user={user} isAdmin={isAdmin} />
+        <main className="container mx-auto px-4 py-8">
+          <div className="max-w-2xl mx-auto text-center">
+            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6">
+              <h1 className="text-2xl font-bold text-yellow-800 mb-2">
+                Player Not Active
+              </h1>
+              <p className="text-yellow-700 mb-4">
+                {player.name} is currently inactive and not participating in the tournament.
+              </p>
+              <Link 
+                href="/"
+                className="inline-block bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors"
+              >
+                Back to Leaderboard
+              </Link>
+            </div>
+          </div>
+        </main>
+      </div>
+    )
+  }
+
   // Calculate player stats
   const playerMatches = matches
   const wins = playerMatches.filter(match => {

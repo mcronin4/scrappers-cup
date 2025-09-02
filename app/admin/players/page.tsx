@@ -36,7 +36,7 @@ export default function PlayersPage() {
     const fetchData = async () => {
       try {
         const [playersData, emailsData] = await Promise.all([
-          supabase.from('players').select('*').order('current_rank', { ascending: true }),
+          supabase.from('players').select('*').eq('is_active', true).order('current_rank', { ascending: true }),
           supabase.from('allowed_emails').select('*').order('email', { ascending: true })
         ])
 

@@ -114,46 +114,9 @@ export default function MatchHistory({ matches: initialMatches }: MatchHistoryPr
         throw matchError
       }
 
-      // Recalculate ladder rankings for all players
-      const { data: allPlayers, error: playersError } = await supabase
-        .from('players')
-        .select('*')
-        .order('current_rank', { ascending: true })
-
-      if (playersError) {
-        throw playersError
-      }
-
-      if (allPlayers) {
-        // Reset all players to initial ranks, then recalculate from all matches
-        const { data: allMatches } = await supabase
-          .from('matches')
-          .select('*')
-          .order('date_played', { ascending: true })
-
-        if (allMatches) {
-          // Reset ranks to initial
-          let currentPlayers = allPlayers.map(p => ({ ...p, current_rank: p.initial_rank }))
-          
-          // Apply all matches in chronological order
-          const { updateLadderRankings } = await import('@/lib/utils/ladder')
-          for (const match of allMatches) {
-            currentPlayers = updateLadderRankings(currentPlayers, match as Match)
-          }
-
-          // Update all player rankings in database
-          for (const player of currentPlayers) {
-            const { error: updateError } = await supabase
-              .from('players')
-              .update({ current_rank: player.current_rank })
-              .eq('id', player.id)
-
-            if (updateError) {
-              console.error('Error updating player rank:', updateError)
-            }
-          }
-        }
-      }
+      // Rebuild rankings from unified timeline after match edit
+      const { rebuildRankingsFromTimeline } = await import('@/lib/utils/ladder')
+      await rebuildRankingsFromTimeline(supabase)
 
       setMessage('Match updated successfully! Rankings recalculated.')
       setEditingMatch(null)
@@ -214,6 +177,8 @@ export default function MatchHistory({ matches: initialMatches }: MatchHistoryPr
 
     setLoading(true)
     try {
+      console.log('Deleting match and recalculating rankings...')
+      
       const { error } = await supabase
         .from('matches')
         .delete()
@@ -223,39 +188,15 @@ export default function MatchHistory({ matches: initialMatches }: MatchHistoryPr
         throw error
       }
 
-      // Recalculate rankings after deletion (same logic as edit)
-      const { data: allPlayers } = await supabase
-        .from('players')
-        .select('*')
-        .order('current_rank', { ascending: true })
-
-      if (allPlayers) {
-        const { data: allMatches } = await supabase
-          .from('matches')
-          .select('*')
-          .order('date_played', { ascending: true })
-
-        if (allMatches) {
-          let currentPlayers = allPlayers.map(p => ({ ...p, current_rank: p.initial_rank }))
-          
-          const { updateLadderRankings } = await import('@/lib/utils/ladder')
-          for (const match of allMatches) {
-            currentPlayers = updateLadderRankings(currentPlayers, match as Match)
-          }
-
-          for (const player of currentPlayers) {
-            await supabase
-              .from('players')
-              .update({ current_rank: player.current_rank })
-              .eq('id', player.id)
-          }
-        }
-      }
+      // Rebuild rankings from unified timeline after match deletion
+      const { rebuildRankingsFromTimeline } = await import('@/lib/utils/ladder')
+      await rebuildRankingsFromTimeline(supabase)
 
       setMessage('Match deleted successfully! Rankings recalculated.')
       setMatches(matches.filter(m => m.id !== matchId))
 
     } catch (error: unknown) {
+      console.error('Error in handleDeleteMatch:', error)
       setMessage(`Error: ${error instanceof Error ? error.message : 'An unexpected error occurred'}`)
     } finally {
       setLoading(false)

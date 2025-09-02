@@ -6,13 +6,15 @@ import { useRouter } from 'next/navigation'
 import Navigation from '@/components/Navigation'
 import MatchEntryForm from '@/components/admin/MatchEntryForm'
 import MatchHistory from '@/components/admin/MatchHistory'
+
+import TransactionLogView from '@/components/admin/TransactionLogView'
 import { Player, MatchWithPlayers } from '@/lib/types/database'
 
 export default function AdminPage() {
   const [user, setUser] = useState<{ email: string } | null>(null)
   const [players, setPlayers] = useState<Player[]>([])
   const [matches, setMatches] = useState<MatchWithPlayers[]>([])
-  const [activeTab, setActiveTab] = useState<'enter' | 'history'>('enter')
+  const [activeTab, setActiveTab] = useState<'enter' | 'history' | 'transaction-log'>('enter')
   const [loading, setLoading] = useState(true)
   const router = useRouter()
   const supabase = createClient()
@@ -38,7 +40,7 @@ export default function AdminPage() {
     const fetchData = async () => {
       try {
         const [playersData, matchesData] = await Promise.all([
-          supabase.from('players').select('*').order('name', { ascending: true }),
+          supabase.from('players').select('*').eq('is_active', true).order('name', { ascending: true }),
           supabase.from('matches').select(`
             *,
             player1:players!matches_player1_id_fkey(*),
@@ -110,6 +112,17 @@ export default function AdminPage() {
             >
               Match History
             </button>
+
+            <button
+              onClick={() => setActiveTab('transaction-log')}
+              className={`px-6 py-2 rounded-md text-sm font-medium transition-colors ${
+                activeTab === 'transaction-log'
+                  ? 'bg-blue-600 text-white'
+                  : 'text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              Transaction Log
+            </button>
           </div>
         </div>
         
@@ -118,9 +131,13 @@ export default function AdminPage() {
           <div className="max-w-2xl mx-auto">
             <MatchEntryForm players={players} />
           </div>
-        ) : (
+        ) : activeTab === 'history' ? (
           <div className="max-w-6xl mx-auto">
             <MatchHistory matches={matches} />
+          </div>
+        ) : (
+          <div className="max-w-6xl mx-auto">
+            <TransactionLogView />
           </div>
         )}
       </main>
