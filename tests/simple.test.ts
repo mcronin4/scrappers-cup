@@ -18,10 +18,13 @@ describe('Test Setup Verification', () => {
     const player = {
       id: '1',
       name: 'Test Player',
-      is_active: true
+      current_rank: 1,
+      initial_rank: 1,
     }
     
     expect(player.name).toBe('Test Player')
-    expect(player.is_active).toBe(true)
+    expect(player.id).toBe('1')
+    expect(player.current_rank).toBe(1)
+    expect(player.initial_rank).toBe(1)
   })
 })
