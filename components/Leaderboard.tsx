@@ -9,14 +9,13 @@ interface LeaderboardProps {
 }
 
 export default function Leaderboard({ players, matches }: LeaderboardProps) {
-  // Players are already filtered and re-ranked by getActiveLeaderboard utility
-  const sortedPlayers = [...players].sort((a, b) => (a.display_rank || a.current_rank) - (b.display_rank || b.current_rank))
+  // Players should already be sorted by current_rank
+  const sortedPlayers = [...players]
   
   // Debug: Check for duplicate ranks
   const rankCounts: { [key: number]: number } = {}
   sortedPlayers.forEach(player => {
-    const displayRank = player.display_rank || player.current_rank
-    rankCounts[displayRank] = (rankCounts[displayRank] || 0) + 1
+    rankCounts[player.current_rank] = (rankCounts[player.current_rank] || 0) + 1
   })
   
   const duplicateRanks = Object.entries(rankCounts).filter(([rank, count]) => count > 1)
@@ -103,7 +102,7 @@ export default function Leaderboard({ players, matches }: LeaderboardProps) {
             {playerStats.map((stats) => (
               <tr key={stats.player.id} className="hover:bg-gray-50">
                 <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                  #{stats.player.display_rank || stats.player.current_rank}
+                  #{stats.player.current_rank}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
                   <Link 
@@ -133,7 +132,7 @@ export default function Leaderboard({ players, matches }: LeaderboardProps) {
       
       {players.length === 0 && (
         <div className="px-6 py-8 text-center text-gray-500">
-          No active players found. Add players in the admin panel to get started.
+          No players found. Add players in the admin panel to get started.
         </div>
       )}
     </div>

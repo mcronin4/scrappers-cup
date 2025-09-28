@@ -7,11 +7,9 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "test": "node comprehensive-test-runner.js",
-    "test:vitest": "vitest run --config vitest.test.config.ts",
+    "test": "vitest run --config vitest.test.config.ts",
     "test:watch": "vitest --config vitest.test.config.ts --watch",
-    "test:coverage": "vitest run --config vitest.test.config.ts --coverage",
-    "test:simple": "node simple-test-runner.js"
+    "test:coverage": "vitest run --config vitest.test.config.ts --coverage"
   },
   "dependencies": {
     "@supabase/ssr": "^0.5.1",

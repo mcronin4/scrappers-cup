@@ -6,7 +6,8 @@ import { useRouter } from 'next/navigation'
 import Navigation from '@/components/Navigation'
 import MatchEntryForm from '@/components/admin/MatchEntryForm'
 import MatchHistory from '@/components/admin/MatchHistory'
-
+import RankingManager from '@/components/admin/RankingManager'
+import InitialRankingsManager from '@/components/admin/InitialRankingsManager'
 import TransactionLogView from '@/components/admin/TransactionLogView'
 import { Player, MatchWithPlayers } from '@/lib/types/database'
 
@@ -14,10 +15,29 @@ export default function AdminPage() {
   const [user, setUser] = useState<{ email: string } | null>(null)
   const [players, setPlayers] = useState<Player[]>([])
   const [matches, setMatches] = useState<MatchWithPlayers[]>([])
-  const [activeTab, setActiveTab] = useState<'enter' | 'history' | 'transaction-log'>('enter')
+  const [activeTab, setActiveTab] = useState<'enter' | 'history' | 'rankings' | 'initial-rankings' | 'transaction-log'>('enter')
   const [loading, setLoading] = useState(true)
   const router = useRouter()
   const supabase = createClient()
+
+  const handleMatchAdded = async () => {
+    // Refresh matches and players after a new match is added
+    try {
+      const [playersData, matchesData] = await Promise.all([
+        supabase.from('players').select('*').order('name', { ascending: true }),
+        supabase.from('matches').select(`
+          *,
+          player1:players!matches_player1_id_fkey(*),
+          player2:players!matches_player2_id_fkey(*)
+        `).order('created_at', { ascending: false })
+      ])
+
+      setPlayers(playersData.data || [])
+      setMatches(matchesData.data || [])
+    } catch (error) {
+      console.error('Error refreshing data after match added:', error)
+    }
+  }
 
   useEffect(() => {
     const checkAuth = () => {
@@ -40,12 +60,12 @@ export default function AdminPage() {
     const fetchData = async () => {
       try {
         const [playersData, matchesData] = await Promise.all([
-          supabase.from('players').select('*').eq('is_active', true).order('name', { ascending: true }),
+          supabase.from('players').select('*').order('name', { ascending: true }),
           supabase.from('matches').select(`
             *,
             player1:players!matches_player1_id_fkey(*),
             player2:players!matches_player2_id_fkey(*)
-          `).order('date_played', { ascending: false })
+          `).order('created_at', { ascending: false })
         ])
 
         setPlayers(playersData.data || [])
@@ -114,6 +134,28 @@ export default function AdminPage() {
             </button>
 
             <button
+              onClick={() => setActiveTab('rankings')}
+              className={`px-6 py-2 rounded-md text-sm font-medium transition-colors ${
+                activeTab === 'rankings'
+                  ? 'bg-blue-600 text-white'
+                  : 'text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              Move Players
+            </button>
+
+            <button
+              onClick={() => setActiveTab('initial-rankings')}
+              className={`px-6 py-2 rounded-md text-sm font-medium transition-colors ${
+                activeTab === 'initial-rankings'
+                  ? 'bg-blue-600 text-white'
+                  : 'text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              Reset Positions
+            </button>
+
+            <button
               onClick={() => setActiveTab('transaction-log')}
               className={`px-6 py-2 rounded-md text-sm font-medium transition-colors ${
                 activeTab === 'transaction-log'
@@ -121,7 +163,7 @@ export default function AdminPage() {
                   : 'text-gray-600 hover:text-gray-900'
               }`}
             >
-              Transaction Log
+              Activity Log
             </button>
           </div>
         </div>
@@ -129,11 +171,19 @@ export default function AdminPage() {
         {/* Tab Content */}
         {activeTab === 'enter' ? (
           <div className="max-w-2xl mx-auto">
-            <MatchEntryForm players={players} />
+            <MatchEntryForm players={players} onMatchAdded={handleMatchAdded} />
           </div>
         ) : activeTab === 'history' ? (
           <div className="max-w-6xl mx-auto">
-            <MatchHistory matches={matches} />
+            <MatchHistory matches={matches} onMatchesUpdated={handleMatchAdded} />
+          </div>
+        ) : activeTab === 'rankings' ? (
+          <div className="max-w-4xl mx-auto">
+            <RankingManager players={players} />
+          </div>
+        ) : activeTab === 'initial-rankings' ? (
+          <div className="max-w-4xl mx-auto">
+            <InitialRankingsManager players={players} />
           </div>
         ) : (
           <div className="max-w-6xl mx-auto">

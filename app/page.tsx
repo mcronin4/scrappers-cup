@@ -6,7 +6,6 @@ import { useRouter } from 'next/navigation'
 import Leaderboard from '@/components/Leaderboard'
 import Navigation from '@/components/Navigation'
 import { Player, MatchWithPlayers } from '@/lib/types/database'
-import { getActiveLeaderboard } from '@/lib/utils/ladder'
 
 export default function Home() {
   const [user, setUser] = useState<{ email: string } | null>(null)
@@ -90,7 +89,7 @@ export default function Home() {
           </p>
         </div>
         
-        <Leaderboard players={getActiveLeaderboard(players)} matches={matches} />
+        <Leaderboard players={players.sort((a, b) => a.current_rank - b.current_rank)} matches={matches} />
       </main>
     </div>
   )
