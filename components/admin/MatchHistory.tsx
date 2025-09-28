@@ -3,15 +3,20 @@
 import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { MatchWithPlayers, Match } from '@/lib/types/database'
-// import { useRouter } from 'next/navigation'
 import { determineMatchWinner } from '@/lib/utils/ladder'
 
 interface MatchHistoryProps {
   matches: MatchWithPlayers[]
+  onMatchesUpdated?: () => void
 }
 
-export default function MatchHistory({ matches: initialMatches }: MatchHistoryProps) {
+export default function MatchHistory({ matches: initialMatches, onMatchesUpdated }: MatchHistoryProps) {
   const [matches, setMatches] = useState<MatchWithPlayers[]>(initialMatches)
+  
+  // Sort matches by created_at for proper chronological order
+  const sortedMatches = matches.sort((a, b) => 
+    new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+  )
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState('')
   const [editingMatch, setEditingMatch] = useState<string | null>(null)
@@ -29,8 +34,11 @@ export default function MatchHistory({ matches: initialMatches }: MatchHistoryPr
 
   const handleEditMatch = (match: MatchWithPlayers) => {
     setEditingMatch(match.id)
+    // Convert timestamp to date format for the form
+    const matchDate = new Date(match.date_played)
+    const dateOnly = matchDate.toISOString().split('T')[0]
     setEditForm({
-      date_played: match.date_played,
+      date_played: dateOnly,
       set1_p1_games: match.set1_p1_games,
       set1_p2_games: match.set1_p2_games,
       set2_p1_games: match.set2_p1_games,
@@ -44,6 +52,7 @@ export default function MatchHistory({ matches: initialMatches }: MatchHistoryPr
     if (!editingMatch) return
 
     setLoading(true)
+    setMessage('Updating match...')
     try {
       // Determine set winners
       const set1_winner = editForm.set1_p1_games > editForm.set1_p2_games ? 1 as const : 2 as const
@@ -114,9 +123,38 @@ export default function MatchHistory({ matches: initialMatches }: MatchHistoryPr
         throw matchError
       }
 
-      // Rebuild rankings from unified timeline after match edit
-      const { rebuildRankingsFromTimeline } = await import('@/lib/utils/ladder')
-      await rebuildRankingsFromTimeline(supabase)
+      // Update the corresponding ranking event with new match data
+      const { data: updatedMatch, error: fetchUpdatedMatchError } = await supabase
+        .from('matches')
+        .select('*')
+        .eq('id', editingMatch)
+        .single()
+
+      if (fetchUpdatedMatchError || !updatedMatch) {
+        throw new Error('Failed to fetch updated match data')
+      }
+
+      setMessage('Updating player positions...')
+      
+      // Update the existing ranking event with new match results
+      const { updateMatchEvent, rebuildAllRankings } = await import('@/lib/utils/events')
+      
+      console.log('About to update match event for match:', updatedMatch.id)
+      console.log('Updated match data:', updatedMatch)
+      
+      try {
+        // Update the ranking event with the new match data
+        await updateMatchEvent(supabase, updatedMatch)
+        console.log('Successfully called updateMatchEvent')
+      } catch (error) {
+        console.error('Error in updateMatchEvent:', error)
+        throw error
+      }
+      
+      setMessage('Calculating new rankings...')
+      
+      // Rebuild all rankings from initial state
+      await rebuildAllRankings(supabase)
 
       setMessage('Match updated successfully! Rankings recalculated.')
       setEditingMatch(null)
@@ -150,6 +188,11 @@ export default function MatchHistory({ matches: initialMatches }: MatchHistoryPr
           : m
       ))
 
+      // Notify parent component to refresh data
+      if (onMatchesUpdated) {
+        onMatchesUpdated()
+      }
+
     } catch (error: unknown) {
       setMessage(`Error: ${error instanceof Error ? error.message : 'An unexpected error occurred'}`)
     } finally {
@@ -171,29 +214,55 @@ export default function MatchHistory({ matches: initialMatches }: MatchHistoryPr
   }
 
   const handleDeleteMatch = async (matchId: string) => {
-    if (!confirm('Are you sure you want to delete this match? This will recalculate all rankings.')) {
+    if (!confirm('Are you sure you want to delete this match? This will update all player positions.')) {
       return
     }
 
     setLoading(true)
+    setMessage('Deleting match...')
     try {
       console.log('Deleting match and recalculating rankings...')
       
-      const { error } = await supabase
+      // Delete the associated ranking event first (explicit delete)
+      const { error: deleteEventError } = await supabase
+        .from('ranking_events')
+        .delete()
+        .eq('match_id', matchId)
+
+      if (deleteEventError) {
+        console.warn('Failed to delete ranking event:', deleteEventError)
+        // Continue anyway - maybe there wasn't one
+      } else {
+        console.log('Successfully deleted ranking event')
+      }
+
+      // Delete the match
+      const { error: deleteMatchError } = await supabase
         .from('matches')
         .delete()
         .eq('id', matchId)
 
-      if (error) {
-        throw error
+      if (deleteMatchError) {
+        throw new Error(`Failed to delete match: ${deleteMatchError.message}`)
       }
 
-      // Rebuild rankings from unified timeline after match deletion
-      const { rebuildRankingsFromTimeline } = await import('@/lib/utils/ladder')
-      await rebuildRankingsFromTimeline(supabase)
+      console.log('Successfully deleted match')
 
-      setMessage('Match deleted successfully! Rankings recalculated.')
+      setMessage('Calculating new rankings...')
+
+      // Rebuild all rankings from initial state
+      const { rebuildAllRankings } = await import('@/lib/utils/events')
+      await rebuildAllRankings(supabase)
+
+      console.log('Rankings rebuilt successfully')
+
+      setMessage('Match deleted successfully! Player positions have been updated.')
       setMatches(matches.filter(m => m.id !== matchId))
+
+      // Notify parent component to refresh data
+      if (onMatchesUpdated) {
+        onMatchesUpdated()
+      }
 
     } catch (error: unknown) {
       console.error('Error in handleDeleteMatch:', error)
@@ -217,8 +286,17 @@ export default function MatchHistory({ matches: initialMatches }: MatchHistoryPr
   }
 
   return (
-    <div className="space-y-6">
-      {message && (
+    <div className="space-y-6 relative">
+      {loading && (
+        <div className="absolute inset-0 bg-white bg-opacity-75 flex items-center justify-center z-10 rounded-lg">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+            <p className="mt-4 text-gray-600 font-medium">{message || 'Processing...'}</p>
+          </div>
+        </div>
+      )}
+      
+      {message && !loading && (
         <div className={`p-4 rounded-md ${
           message.startsWith('Error') ? 'bg-red-50 text-red-700' : 'bg-green-50 text-green-700'
         }`}>
@@ -254,7 +332,7 @@ export default function MatchHistory({ matches: initialMatches }: MatchHistoryPr
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {matches.map((match) => (
+              {sortedMatches.map((match) => (
                 <tr key={match.id} className="hover:bg-gray-50">
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                     {editingMatch === match.id ? (
@@ -266,8 +344,9 @@ export default function MatchHistory({ matches: initialMatches }: MatchHistoryPr
                       />
                     ) : (
                       (() => {
-                        const [year, month, day] = match.date_played.split('-')
-                        return new Date(parseInt(year), parseInt(month) - 1, parseInt(day)).toLocaleDateString()
+                        // Handle both date-only and full timestamp formats
+                        const date = new Date(match.date_played)
+                        return date.toLocaleDateString()
                       })()
                     )}
                   </td>
