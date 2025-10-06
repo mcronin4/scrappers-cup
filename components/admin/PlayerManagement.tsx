@@ -77,6 +77,7 @@ export default function PlayerManagement({ players: initialPlayers, allowedEmail
         .insert([{
           name: newPlayer.name,
           email: newPlayer.email,
+          initial_rank: nextRank,
           current_rank: nextRank,
           notes: newPlayer.notes,
         }])
