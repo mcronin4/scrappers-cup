@@ -43,6 +43,12 @@ export default function Navigation({ user, isAdmin }: NavigationProps) {
               >
                 Leaderboard
               </Link>
+              <Link
+                href="/history"
+                className="text-gray-600 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium"
+              >
+                Game History
+              </Link>
               
               {isAdmin && (
                 <>
@@ -109,6 +115,13 @@ export default function Navigation({ user, isAdmin }: NavigationProps) {
                 className="text-gray-600 hover:text-gray-900 hover:bg-gray-50 block px-3 py-2 rounded-md text-base font-medium"
               >
                 Leaderboard
+              </Link>
+              <Link
+                href="/history"
+                onClick={closeMobileMenu}
+                className="text-gray-600 hover:text-gray-900 hover:bg-gray-50 block px-3 py-2 rounded-md text-base font-medium"
+              >
+                Game History
               </Link>
               
               {isAdmin && (
