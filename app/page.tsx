@@ -11,6 +11,7 @@ export default function Home() {
   const [user, setUser] = useState<{ email: string } | null>(null)
   const [isAdmin, setIsAdmin] = useState(false)
   const [players, setPlayers] = useState<Player[]>([])
+  const [matches, setMatches] = useState<MatchWithPlayers[]>([])
   const [loading, setLoading] = useState(true)
   const router = useRouter()
   const supabase = createClient()
@@ -37,7 +38,18 @@ export default function Home() {
           .select('*')
           .order('current_rank', { ascending: true })
 
+        // Fetch matches with player data
+        const { data: matchesData } = await supabase
+          .from('matches')
+          .select(`
+            *,
+            player1:players!matches_player1_id_fkey(*),
+            player2:players!matches_player2_id_fkey(*)
+          `)
+          .order('date_played', { ascending: false })
+
         setPlayers(playersData || [])
+        setMatches(matchesData || [])
       } catch (error) {
         console.error('Error fetching data:', error)
       } finally {
@@ -78,7 +90,7 @@ export default function Home() {
         </div>
         
         <div className="space-y-8">
-          <Leaderboard players={players.sort((a, b) => a.current_rank - b.current_rank)} />
+          <Leaderboard players={players.sort((a, b) => a.current_rank - b.current_rank)} matches={matches} />
         </div>
       </main>
     </div>
