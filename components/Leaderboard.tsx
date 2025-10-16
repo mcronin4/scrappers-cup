@@ -5,7 +5,7 @@ import Link from 'next/link'
 
 interface LeaderboardProps {
   players: Player[]
-  matches: MatchWithPlayers[]
+  matches?: MatchWithPlayers[]
 }
 
 export default function Leaderboard({ players, matches }: LeaderboardProps) {
@@ -25,6 +25,19 @@ export default function Leaderboard({ players, matches }: LeaderboardProps) {
 
   // Calculate stats for each player
   const playerStats = sortedPlayers.map(player => {
+    // If matches data is not available, show basic info only
+    if (!matches) {
+      return {
+        player,
+        totalMatches: 0,
+        wins: 0,
+        losses: 0,
+        setsWon: 0,
+        setsLost: 0,
+        winPercentage: 0
+      }
+    }
+
     const playerMatches = matches.filter(
       match => match.player1_id === player.id || match.player2_id === player.id
     )
@@ -42,7 +55,7 @@ export default function Leaderboard({ players, matches }: LeaderboardProps) {
 
     playerMatches.forEach(match => {
       const isPlayer1 = match.player1_id === player.id
-      
+
       // Count set wins
       if ((isPlayer1 && match.set1_winner === 1) || (!isPlayer1 && match.set1_winner === 2)) {
         setsWon++
@@ -70,9 +83,14 @@ export default function Leaderboard({ players, matches }: LeaderboardProps) {
 
   return (
     <div className="bg-white rounded-lg shadow-sm overflow-hidden">
-      <div className="px-6 py-4 border-b border-gray-200">
-        <h2 className="text-lg font-semibold text-gray-900">Current Standings</h2>
-      </div>
+        <div className="px-6 py-4 border-b border-gray-200">
+          <h2 className="text-lg font-semibold text-gray-900">Current Standings</h2>
+          {!matches && (
+            <p className="text-sm text-gray-600 mt-1">
+              Match statistics will appear here once games are played
+            </p>
+          )}
+        </div>
       
       <div className="overflow-x-auto">
         <table className="min-w-full divide-y divide-gray-200">
