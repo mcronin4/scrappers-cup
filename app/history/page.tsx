@@ -76,9 +76,6 @@ export default function HistoryPage() {
           <h1 className="text-4xl font-bold text-gray-900 mb-2">
             🏆 Game History 🏆
           </h1>
-          <p className="text-gray-600">
-            Complete history of all matches played in the tournament
-          </p>
         </div>
 
         <div className="space-y-8">
