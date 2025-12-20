@@ -3,14 +3,14 @@
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
-import GameHistory from '@/components/GameHistory'
 import Navigation from '@/components/Navigation'
-import { MatchWithPlayers } from '@/lib/types/database'
+import ContactInfo from '@/components/ContactInfo'
+import { Player } from '@/lib/types/database'
 
-export default function HistoryPage() {
+export default function ContactPage() {
   const [user, setUser] = useState<{ email: string } | null>(null)
   const [isAdmin, setIsAdmin] = useState(false)
-  const [matches, setMatches] = useState<MatchWithPlayers[]>([])
+  const [players, setPlayers] = useState<Player[]>([])
   const [loading, setLoading] = useState(true)
   const router = useRouter()
   const supabase = createClient()
@@ -31,17 +31,13 @@ export default function HistoryPage() {
 
     const fetchData = async () => {
       try {
-        // Fetch matches
-        const { data: matchesData } = await supabase
-          .from('matches')
-          .select(`
-            *,
-            player1:players!matches_player1_id_fkey(*),
-            player2:players!matches_player2_id_fkey(*)
-          `)
-          .order('date_played', { ascending: false })
+        // Fetch all players - sorted alphabetically by name as default
+        const { data: playersData } = await supabase
+          .from('players')
+          .select('*')
+          .order('name', { ascending: true })
 
-        setMatches(matchesData || [])
+        setPlayers(playersData || [])
       } catch (error) {
         console.error('Error fetching data:', error)
       } finally {
@@ -74,14 +70,15 @@ export default function HistoryPage() {
       <main className="container mx-auto px-4 py-8">
         <div className="text-center mb-8">
           <h1 className="text-4xl font-bold text-gray-900 mb-2">
-            🏆 Game History 🏆
+            Contact Info
           </h1>
         </div>
 
         <div className="space-y-8">
-          <GameHistory matches={matches} />
+          <ContactInfo players={players} />
         </div>
       </main>
     </div>
   )
 }
+

@@ -49,6 +49,12 @@ export default function Navigation({ user, isAdmin }: NavigationProps) {
               >
                 Game History
               </Link>
+              <Link
+                href="/contact"
+                className="text-gray-600 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium"
+              >
+                Contact Info
+              </Link>
               
               {isAdmin && (
                 <>
@@ -122,6 +128,13 @@ export default function Navigation({ user, isAdmin }: NavigationProps) {
                 className="text-gray-600 hover:text-gray-900 hover:bg-gray-50 block px-3 py-2 rounded-md text-base font-medium"
               >
                 Game History
+              </Link>
+              <Link
+                href="/contact"
+                onClick={closeMobileMenu}
+                className="text-gray-600 hover:text-gray-900 hover:bg-gray-50 block px-3 py-2 rounded-md text-base font-medium"
+              >
+                Contact Info
               </Link>
               
               {isAdmin && (

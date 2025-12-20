@@ -84,9 +84,6 @@ export default function Home() {
           <h1 className="text-4xl font-bold text-gray-900 mb-2">
             🏆 Scrappers Cup Ladder 🏆
           </h1>
-          <p className="text-gray-600">
-            Tennis tournament ladder system
-          </p>
         </div>
         
         <div className="space-y-8">
