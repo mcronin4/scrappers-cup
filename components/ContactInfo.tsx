@@ -72,7 +72,7 @@ export default function ContactInfo({ players: initialPlayers }: ContactInfoProp
     const selectedEmails = filteredAndSortedPlayers
       .filter(player => selectedPlayers.has(player.id))
       .map(player => player.email)
-      .join('; ')
+      .join(',')
 
     try {
       await navigator.clipboard.writeText(selectedEmails)
@@ -89,6 +89,15 @@ export default function ContactInfo({ players: initialPlayers }: ContactInfoProp
 
   return (
     <div className="bg-white rounded-lg shadow">
+      {/* Instruction note */}
+      <div className="px-6 py-4 bg-blue-50 border-b border-blue-200">
+        <p className="text-sm text-gray-700">
+          <strong>How to use:</strong> Select the player, or multiple players, you want to reach out to for a match. 
+          Copy the address(es) selected. Open up your email and start a new email. Paste in the email address(es) copied 
+          from the website so you can reach out to schedule a match.
+        </p>
+      </div>
+
       {/* Search and controls */}
       <div className="px-6 py-4 border-b border-gray-200">
         <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
