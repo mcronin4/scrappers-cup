@@ -23,6 +23,8 @@ export interface Match {
   tiebreaker_p1_points?: number | null
   tiebreaker_p2_points?: number | null
   match_winner: 1 | 2
+  has_retirement?: boolean
+  retired_player?: 1 | 2 | null
   created_at: string
 }
 

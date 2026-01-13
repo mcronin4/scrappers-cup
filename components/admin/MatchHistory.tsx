@@ -28,6 +28,8 @@ export default function MatchHistory({ matches: initialMatches, onMatchesUpdated
     set2_p2_games: 0,
     tiebreaker_p1_points: '',
     tiebreaker_p2_points: '',
+    has_retirement: false,
+    retired_player: null as 1 | 2 | null,
   })
   // const router = useRouter()
   const supabase = createClient()
@@ -45,6 +47,8 @@ export default function MatchHistory({ matches: initialMatches, onMatchesUpdated
       set2_p2_games: match.set2_p2_games,
       tiebreaker_p1_points: match.tiebreaker_p1_points?.toString() || '',
       tiebreaker_p2_points: match.tiebreaker_p2_points?.toString() || '',
+      has_retirement: match.has_retirement || false,
+      retired_player: match.retired_player || null,
     })
   }
 
@@ -79,11 +83,18 @@ export default function MatchHistory({ matches: initialMatches, onMatchesUpdated
         tiebreaker_winner: null as (1 | 2) | null,
         tiebreaker_p1_points: null as number | null,
         tiebreaker_p2_points: null as number | null,
+        has_retirement: editForm.has_retirement,
+        retired_player: editForm.has_retirement ? editForm.retired_player : null as (1 | 2) | null,
         created_at: currentMatch.created_at,
       }
 
-      // Handle tiebreaker if both sets won by different players
-      if (set1_winner !== set2_winner) {
+      // Handle retirement validation
+      if (editForm.has_retirement && !editForm.retired_player) {
+        throw new Error('Please select which player retired')
+      }
+
+      // Handle tiebreaker if both sets won by different players (only if no retirement)
+      if (set1_winner !== set2_winner && !editForm.has_retirement) {
         if (!editForm.tiebreaker_p1_points || !editForm.tiebreaker_p2_points) {
           throw new Error('Tiebreaker scores required when sets are split 1-1')
         }
@@ -113,6 +124,8 @@ export default function MatchHistory({ matches: initialMatches, onMatchesUpdated
         tiebreaker_p1_points: finalMatchData.tiebreaker_p1_points,
         tiebreaker_p2_points: finalMatchData.tiebreaker_p2_points,
         match_winner: finalMatchData.match_winner,
+        has_retirement: finalMatchData.has_retirement,
+        retired_player: finalMatchData.retired_player,
       }
       const { error: matchError } = await supabase
         .from('matches')
@@ -166,6 +179,8 @@ export default function MatchHistory({ matches: initialMatches, onMatchesUpdated
         set2_p2_games: 0,
         tiebreaker_p1_points: '',
         tiebreaker_p2_points: '',
+        has_retirement: false,
+        retired_player: null,
       })
 
       // Update local state
@@ -183,7 +198,9 @@ export default function MatchHistory({ matches: initialMatches, onMatchesUpdated
               tiebreaker_winner: finalMatchData.tiebreaker_winner,
               tiebreaker_p1_points: finalMatchData.tiebreaker_p1_points,
               tiebreaker_p2_points: finalMatchData.tiebreaker_p2_points,
-              match_winner: finalMatchData.match_winner
+              match_winner: finalMatchData.match_winner,
+              has_retirement: finalMatchData.has_retirement,
+              retired_player: finalMatchData.retired_player
             }
           : m
       ))
@@ -210,6 +227,8 @@ export default function MatchHistory({ matches: initialMatches, onMatchesUpdated
       set2_p2_games: 0,
       tiebreaker_p1_points: '',
       tiebreaker_p2_points: '',
+      has_retirement: false,
+      retired_player: null,
     })
   }
 
@@ -273,6 +292,11 @@ export default function MatchHistory({ matches: initialMatches, onMatchesUpdated
   }
 
   const needsTiebreaker = () => {
+    // Don't show tiebreaker if there's a retirement
+    if (editForm.has_retirement) {
+      return false
+    }
+    
     const set1Completed = editForm.set1_p1_games > 0 || editForm.set1_p2_games > 0
     const set2Completed = editForm.set2_p1_games > 0 || editForm.set2_p2_games > 0
     
@@ -422,6 +446,36 @@ export default function MatchHistory({ matches: initialMatches, onMatchesUpdated
                             />
                           </div>
                         )}
+                        <div className="flex items-center space-x-2 bg-gray-50 p-2 rounded">
+                          <input
+                            type="checkbox"
+                            id={`retirement-${match.id}`}
+                            checked={editForm.has_retirement}
+                            onChange={(e) => setEditForm({ 
+                              ...editForm, 
+                              has_retirement: e.target.checked,
+                              retired_player: e.target.checked ? editForm.retired_player : null
+                            })}
+                            className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                          />
+                          <label htmlFor={`retirement-${match.id}`} className="text-xs text-gray-700">
+                            Retirement
+                          </label>
+                          {editForm.has_retirement && (
+                            <select
+                              value={editForm.retired_player || ''}
+                              onChange={(e) => setEditForm({ 
+                                ...editForm, 
+                                retired_player: e.target.value ? parseInt(e.target.value) as 1 | 2 : null 
+                              })}
+                              className="ml-2 px-2 py-1 text-xs border border-gray-300 rounded"
+                            >
+                              <option value="">Select player</option>
+                              <option value="1">{match.player1.name} (P1)</option>
+                              <option value="2">{match.player2.name} (P2)</option>
+                            </select>
+                          )}
+                        </div>
                       </div>
                     ) : (
                       <div>
@@ -431,6 +485,11 @@ export default function MatchHistory({ matches: initialMatches, onMatchesUpdated
                             (TB: {match.tiebreaker_p1_points}-{match.tiebreaker_p2_points})
                           </span>
                         )}
+                        {match.has_retirement && match.retired_player && (
+                          <span className="ml-2 text-red-600 text-xs font-medium">
+                            (Retirement: {match.retired_player === 1 ? match.player1.name : match.player2.name})
+                          </span>
+                        )}
                       </div>
                     )}
                   </td>
@@ -438,6 +497,9 @@ export default function MatchHistory({ matches: initialMatches, onMatchesUpdated
                     <span className="font-medium">
                       {match.match_winner === 1 ? match.player1.name : match.player2.name}
                     </span>
+                    {match.has_retirement && (
+                      <span className="ml-2 text-xs text-red-600">(Retirement)</span>
+                    )}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                     {editingMatch === match.id ? (
