@@ -58,12 +58,20 @@ export default function GameHistory({ matches }: GameHistoryProps) {
                         (TB: {match.tiebreaker_p1_points}-{match.tiebreaker_p2_points})
                       </span>
                     )}
+                    {match.has_retirement && match.retired_player && (
+                      <span className="ml-2 text-red-600 text-xs font-medium">
+                        (Retirement: {match.retired_player === 1 ? match.player1.name : match.player2.name})
+                      </span>
+                    )}
                   </div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                   <span className="font-medium text-green-600">
                     {match.match_winner === 1 ? match.player1.name : match.player2.name}
                   </span>
+                  {match.has_retirement && (
+                    <span className="ml-2 text-xs text-red-600">(Retirement)</span>
+                  )}
                 </td>
               </tr>
             ))}

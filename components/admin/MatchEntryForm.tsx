@@ -30,6 +30,8 @@ export default function MatchEntryForm({ players, onMatchAdded }: MatchEntryForm
     set2_p2_games: 0,
     tiebreaker_p1_points: '',
     tiebreaker_p2_points: '',
+    has_retirement: false,
+    retired_player: null as 1 | 2 | null,
   })
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -65,10 +67,17 @@ export default function MatchEntryForm({ players, onMatchAdded }: MatchEntryForm
         tiebreaker_winner: null as 1 | 2 | null,
         tiebreaker_p1_points: null as number | null,
         tiebreaker_p2_points: null as number | null,
+        has_retirement: formData.has_retirement,
+        retired_player: formData.has_retirement ? formData.retired_player : null as 1 | 2 | null,
       }
 
-      // Handle tiebreaker if both sets won by different players
-      if (set1_winner !== set2_winner) {
+      // Handle retirement validation
+      if (formData.has_retirement && !formData.retired_player) {
+        throw new Error('Please select which player retired')
+      }
+
+      // Handle tiebreaker if both sets won by different players (only if no retirement)
+      if (set1_winner !== set2_winner && !formData.has_retirement) {
         if (!formData.tiebreaker_p1_points || !formData.tiebreaker_p2_points) {
           throw new Error('Tiebreaker scores required when sets are split 1-1')
         }
@@ -126,6 +135,8 @@ export default function MatchEntryForm({ players, onMatchAdded }: MatchEntryForm
         set2_p2_games: 0,
         tiebreaker_p1_points: '',
         tiebreaker_p2_points: '',
+        has_retirement: false,
+        retired_player: null,
       })
 
       // Notify parent component to refresh data
@@ -141,6 +152,11 @@ export default function MatchEntryForm({ players, onMatchAdded }: MatchEntryForm
   }
 
   const needsTiebreaker = () => {
+    // Don't show tiebreaker if there's a retirement
+    if (formData.has_retirement) {
+      return false
+    }
+    
     // Only show tiebreaker if both sets are completed (have non-zero scores)
     const set1Completed = formData.set1_p1_games > 0 || formData.set1_p2_games > 0
     const set2Completed = formData.set2_p1_games > 0 || formData.set2_p2_games > 0
@@ -152,6 +168,11 @@ export default function MatchEntryForm({ players, onMatchAdded }: MatchEntryForm
     const set1Winner = formData.set1_p1_games > formData.set1_p2_games ? 1 : 2
     const set2Winner = formData.set2_p1_games > formData.set2_p2_games ? 1 : 2
     return set1Winner !== set2Winner
+  }
+
+  const getPlayerName = (playerId: string) => {
+    const player = sortedPlayers.find(p => p.id === playerId)
+    return player ? player.name : ''
   }
 
   return (
@@ -280,6 +301,53 @@ export default function MatchEntryForm({ players, onMatchAdded }: MatchEntryForm
               </div>
             </div>
           </div>
+        </div>
+
+        <div className="bg-gray-50 p-4 rounded-lg">
+          <div className="flex items-center mb-4">
+            <input
+              type="checkbox"
+              id="has_retirement"
+              checked={formData.has_retirement}
+              onChange={(e) => setFormData({ 
+                ...formData, 
+                has_retirement: e.target.checked,
+                retired_player: e.target.checked ? formData.retired_player : null
+              })}
+              className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+            />
+            <label htmlFor="has_retirement" className="ml-2 block text-sm font-medium text-gray-700">
+              Retirement?
+            </label>
+          </div>
+          
+          {formData.has_retirement && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Which player retired?
+              </label>
+              <select
+                value={formData.retired_player || ''}
+                onChange={(e) => setFormData({ 
+                  ...formData, 
+                  retired_player: e.target.value ? parseInt(e.target.value) as 1 | 2 : null 
+                })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                required={formData.has_retirement}
+              >
+                <option value="">Select player who retired</option>
+                {formData.player1_id && (
+                  <option value="1">{getPlayerName(formData.player1_id)} (Player 1)</option>
+                )}
+                {formData.player2_id && (
+                  <option value="2">{getPlayerName(formData.player2_id)} (Player 2)</option>
+                )}
+              </select>
+              <p className="mt-2 text-sm text-gray-600">
+                The other player will be declared the winner regardless of score.
+              </p>
+            </div>
+          )}
         </div>
 
         {needsTiebreaker() && (

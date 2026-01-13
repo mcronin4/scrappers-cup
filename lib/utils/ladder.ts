@@ -2,6 +2,11 @@ import { Match } from '@/lib/types/database'
 
 // Simple match winner determination
 export function determineMatchWinner(match: Omit<Match, 'match_winner'>): 1 | 2 {
+  // If there was a retirement, the non-retiring player wins
+  if (match.has_retirement && match.retired_player) {
+    return match.retired_player === 1 ? 2 : 1
+  }
+
   let player1Sets = 0
   let player2Sets = 0
 

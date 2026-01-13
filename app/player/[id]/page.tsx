@@ -254,6 +254,11 @@ export default function PlayerPage({ params }: PlayerPageProps) {
                               })
                             </span>
                           )}
+                          {match.has_retirement && match.retired_player && (
+                            <span className="ml-2 text-red-600 text-xs font-medium">
+                              (Retirement: {match.retired_player === 1 ? match.player1.name : match.player2.name})
+                            </span>
+                          )}
                         </td>
                       </tr>
                     )
